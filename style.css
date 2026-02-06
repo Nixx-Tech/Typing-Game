@@ -230,8 +230,8 @@ body {
   padding: 16px 16px;
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(148, 163, 184, 0.6);
-  font-size: 1.15rem;
-  line-height: 1.7;
+  font-size: 1.3rem;
+  line-height: 1.8;
   color: var(--muted);
   overflow-wrap: break-word;
   outline: none;
@@ -351,7 +351,7 @@ body {
 
   .text-display {
     min-height: 180px;
-    font-size: 1.25rem;
+    font-size: 1.45rem;
   }
 
   .stat-value {
