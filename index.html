@@ -16,7 +16,7 @@
       <main class="app-main">
         <section class="controls">
           <button id="start-btn" class="btn primary">Start Test</button>
-          <button id="restart-btn" class="btn" disabled>Restart</button>
+          <button id="restart-btn" class="btn" disabled>Reset</button>
 
           <label class="select-wrapper">
             <span>Difficulty</span>
@@ -26,19 +26,12 @@
               <option value="hard">Hard (long words)</option>
             </select>
           </label>
-
-          <label class="select-wrapper">
-            <span>Duration</span>
-            <select id="duration-select">
-              <option value="30">30s</option>
-              <option value="60" selected>60s</option>
-              <option value="120">120s</option>
-            </select>
-          </label>
         </section>
 
         <section class="typing-area">
-          <div id="countdown" class="countdown">Time: 60s</div>
+          <div id="countdown" class="countdown">
+            Endless mode · type as long as you like.
+          </div>
           <div id="text-display" class="text-display">
             Click "Start Test" to begin.
           </div>
@@ -56,6 +49,10 @@
             <span id="wpm" class="stat-value">0</span>
           </div>
           <div class="stat">
+            <span class="stat-label">Best WPM</span>
+            <span id="best-wpm" class="stat-value">0</span>
+          </div>
+          <div class="stat">
             <span class="stat-label">Accuracy</span>
             <span id="accuracy" class="stat-value">100%</span>
           </div>
@@ -63,15 +60,6 @@
             <span class="stat-label">Characters</span>
             <span id="chars" class="stat-value">0 / 0</span>
           </div>
-        </section>
-
-        <section class="results" id="results" hidden>
-          <h2>Test Finished</h2>
-          <p>Your final WPM: <strong id="final-wpm">0</strong></p>
-          <p>Your final accuracy: <strong id="final-accuracy">100%</strong></p>
-          <button id="results-restart-btn" class="btn secondary">
-            Try Again
-          </button>
         </section>
       </main>
 
