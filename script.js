@@ -82,36 +82,21 @@ let targetText = "";
 let startTime = null;
 let testRunning = false;
 let highScoreWpm = Number(localStorage.getItem("typingHighScoreWpm") || "0");
+let totalCorrect = 0;
+let totalIncorrect = 0;
+let totalExpectedChars = 0;
 
-function sampleWords(difficulty, minChars) {
+function generateChunk(difficulty, wordCount) {
   const words = WORD_BANK[difficulty] || WORD_BANK.medium;
-  const pieces = [];
-  let total = 0;
-
-  // Shuffle a shallow copy
-  const shuffled = words
-    .slice()
-    .sort(() => (Math.random() > 0.5 ? 1 : -1));
-
-  while (total < minChars) {
-    for (const w of shuffled) {
-      pieces.push(w);
-      total += w.length + 1;
-      if (total >= minChars) break;
-    }
+  const picked = [];
+  for (let i = 0; i < wordCount; i++) {
+    const w = words[Math.floor(Math.random() * words.length)];
+    picked.push(w);
   }
-
-  return pieces.join(" ");
+  return picked.join(" ");
 }
 
-function prepareText() {
-  const difficulty = difficultySelect.value;
-  // Generate a very long stream of text so you effectively never run out.
-  const difficultyMultiplier =
-    difficulty === "easy" ? 1.0 : difficulty === "hard" ? 1.5 : 1.2;
-  const estimatedChars = Math.round(6000 * difficultyMultiplier);
-  targetText = sampleWords(difficulty, estimatedChars);
-
+function renderTargetText() {
   textDisplayEl.innerHTML = "";
   for (const ch of targetText) {
     const span = document.createElement("span");
@@ -119,9 +104,16 @@ function prepareText() {
     span.classList.add("char");
     textDisplayEl.appendChild(span);
   }
-
   markCurrentIndex(0);
-  updateStats(0, 0, 0);
+}
+
+function prepareText() {
+  const difficulty = difficultySelect.value;
+  // Exactly 20 words at a time.
+  targetText = generateChunk(difficulty, 20);
+  totalExpectedChars = targetText.length;
+  renderTargetText();
+  updateStats(0, 100, 0, 0);
 }
 
 function markCurrentIndex(index) {
@@ -164,13 +156,9 @@ function calculateStats(typedText, elapsedSeconds) {
   const totalTyped = correct + incorrect;
   const accuracy = totalTyped === 0 ? 100 : Math.max(0, Math.round((correct / totalTyped) * 100));
 
-  const minutes = elapsedSeconds > 0 ? elapsedSeconds / 60 : 1 / 60;
-  const wpm = Math.round((correct / 5) / minutes);
-
   const nextIndex = Math.min(typedText.length, spans.length - 1);
   markCurrentIndex(nextIndex);
-
-  return { correct, incorrect, accuracy, wpm, totalTyped };
+  return { correct, incorrect, accuracy, totalTyped };
 }
 
 function updateStats(wpm, accuracy, correct, incorrect) {
@@ -181,7 +169,7 @@ function updateStats(wpm, accuracy, correct, incorrect) {
   }
   bestWpmEl.textContent = String(highScoreWpm);
   accuracyEl.textContent = `${accuracy}%`;
-  charsEl.textContent = `${correct + incorrect} / ${targetText.length}`;
+  charsEl.textContent = `${correct + incorrect} / ${totalExpectedChars}`;
 }
 
 function startTest() {
@@ -204,6 +192,9 @@ function startTest() {
 
 function resetToIdle() {
   testRunning = false;
+  totalCorrect = 0;
+  totalIncorrect = 0;
+  totalExpectedChars = 0;
   textInputEl.value = "";
   textInputEl.disabled = true;
 
@@ -218,6 +209,9 @@ function resetToIdle() {
 function restartTest() {
   // Reset everything and start a fresh endless session.
   testRunning = false;
+  totalCorrect = 0;
+  totalIncorrect = 0;
+  totalExpectedChars = 0;
   startBtn.disabled = false;
   startTest();
 }
@@ -231,22 +225,29 @@ textInputEl.addEventListener("input", () => {
   const elapsed = (now - startTime) / 1000;
   const typedText = textInputEl.value;
   const stats = calculateStats(typedText, Math.max(elapsed, 0.1));
-  updateStats(stats.wpm, stats.accuracy, stats.correct, stats.incorrect);
 
-  // If we are getting close to the end of the current text, append more.
-  const remainingChars = targetText.length - typedText.length;
-  if (remainingChars < 200) {
+  // Global stats across all chunks
+  const globalCorrect = totalCorrect + stats.correct;
+  const globalIncorrect = totalIncorrect + stats.incorrect;
+  const totalTypedGlobal = globalCorrect + globalIncorrect;
+  const accuracy =
+    totalTypedGlobal === 0 ? 100 : Math.max(0, Math.round((globalCorrect / totalTypedGlobal) * 100));
+  const minutes = elapsed > 0 ? elapsed / 60 : 1 / 60;
+  const wpm = Math.round((globalCorrect / 5) / minutes);
+
+  updateStats(wpm, accuracy, globalCorrect, globalIncorrect);
+
+  // When current 20-word chunk is fully typed, roll in the next 20 words.
+  if (stats.totalTyped >= targetText.length) {
+    totalCorrect += stats.correct;
+    totalIncorrect += stats.incorrect;
+
     const difficulty = difficultySelect.value;
-    const extra = sampleWords(difficulty, 2000);
-    const startIndex = targetText.length;
-    targetText += " " + extra;
+    targetText = generateChunk(difficulty, 20);
+    totalExpectedChars += targetText.length;
 
-    for (let i = startIndex; i < targetText.length; i++) {
-      const span = document.createElement("span");
-      span.textContent = targetText[i];
-      span.classList.add("char");
-      textDisplayEl.appendChild(span);
-    }
+    renderTargetText();
+    textInputEl.value = "";
   }
 });
 
