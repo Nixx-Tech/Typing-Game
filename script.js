@@ -1,5 +1,4 @@
 const textDisplayEl = document.getElementById("text-display");
-const textInputEl = document.getElementById("text-input");
 const startBtn = document.getElementById("start-btn");
 const restartBtn = document.getElementById("restart-btn");
 const difficultySelect = document.getElementById("difficulty-select");
@@ -9,7 +8,7 @@ const bestWpmEl = document.getElementById("best-wpm");
 const accuracyEl = document.getElementById("accuracy");
 const charsEl = document.getElementById("chars");
 
-// A simple word list grouped by difficulty
+// Word list by difficulty
 const WORD_BANK = {
   easy: [
     "cat",
@@ -79,6 +78,7 @@ const WORD_BANK = {
 };
 
 let targetText = "";
+let typedText = "";
 let startTime = null;
 let testRunning = false;
 let highScoreWpm = Number(localStorage.getItem("typingHighScoreWpm") || "0");
@@ -109,7 +109,7 @@ function renderTargetText() {
 
 function prepareText() {
   const difficulty = difficultySelect.value;
-  // Exactly 20 words at a time.
+  // Exactly 20 words at a time
   targetText = generateChunk(difficulty, 20);
   totalExpectedChars = targetText.length;
   renderTargetText();
@@ -121,12 +121,10 @@ function markCurrentIndex(index) {
   spans.forEach((s) => s.classList.remove("current"));
   if (index >= 0 && index < spans.length) {
     spans[index].classList.add("current");
-    const span = spans[index];
-    span.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
 }
 
-function calculateStats(typedText, elapsedSeconds) {
+function calculateStats(currentTypedText) {
   const spans = textDisplayEl.querySelectorAll(".char");
   const target = targetText;
 
@@ -138,7 +136,7 @@ function calculateStats(typedText, elapsedSeconds) {
     span.classList.remove("correct", "incorrect");
 
     const expectedChar = target[i] ?? "";
-    const typedChar = typedText[i] ?? "";
+    const typedChar = currentTypedText[i] ?? "";
 
     if (typedChar === "") {
       continue;
@@ -154,10 +152,12 @@ function calculateStats(typedText, elapsedSeconds) {
   }
 
   const totalTyped = correct + incorrect;
-  const accuracy = totalTyped === 0 ? 100 : Math.max(0, Math.round((correct / totalTyped) * 100));
+  const accuracy =
+    totalTyped === 0 ? 100 : Math.max(0, Math.round((correct / totalTyped) * 100));
 
-  const nextIndex = Math.min(typedText.length, spans.length - 1);
+  const nextIndex = Math.min(currentTypedText.length, spans.length - 1);
   markCurrentIndex(nextIndex);
+
   return { correct, incorrect, accuracy, totalTyped };
 }
 
@@ -183,20 +183,18 @@ function startTest() {
   restartBtn.disabled = false;
   difficultySelect.disabled = true;
 
-  textInputEl.disabled = false;
-  textInputEl.value = "";
-  textInputEl.focus();
-
+  typedText = "";
   startTime = performance.now();
+  textDisplayEl.focus();
 }
 
 function resetToIdle() {
   testRunning = false;
+  typedText = "";
+  startTime = null;
   totalCorrect = 0;
   totalIncorrect = 0;
   totalExpectedChars = 0;
-  textInputEl.value = "";
-  textInputEl.disabled = true;
 
   startBtn.disabled = false;
   restartBtn.disabled = true;
@@ -209,6 +207,8 @@ function resetToIdle() {
 function restartTest() {
   // Reset everything and start a fresh endless session.
   testRunning = false;
+  typedText = "";
+  startTime = null;
   totalCorrect = 0;
   totalIncorrect = 0;
   totalExpectedChars = 0;
@@ -219,12 +219,40 @@ function restartTest() {
 startBtn.addEventListener("click", startTest);
 restartBtn.addEventListener("click", restartTest);
 
-textInputEl.addEventListener("input", () => {
+// Single main typing area: capture keystrokes on the display box
+textDisplayEl.addEventListener("keydown", (e) => {
   if (!testRunning) return;
+
+  // Ignore modifier combos
+  if (e.ctrlKey || e.metaKey || e.altKey) {
+    return;
+  }
+
   const now = performance.now();
+  if (!startTime) {
+    startTime = now;
+  }
+
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    if (typedText.length > 0) {
+      typedText = typedText.slice(0, -1);
+    }
+  } else if (e.key === "Enter") {
+    // Treat Enter as a space so it still matches words
+    e.preventDefault();
+    typedText += " ";
+  } else if (e.key.length === 1) {
+    // Regular character (letters, numbers, punctuation, space)
+    e.preventDefault();
+    typedText += e.key;
+  } else {
+    // Ignore other keys (arrows, etc.)
+    return;
+  }
+
   const elapsed = (now - startTime) / 1000;
-  const typedText = textInputEl.value;
-  const stats = calculateStats(typedText, Math.max(elapsed, 0.1));
+  const stats = calculateStats(typedText);
 
   // Global stats across all chunks
   const globalCorrect = totalCorrect + stats.correct;
@@ -247,11 +275,9 @@ textInputEl.addEventListener("input", () => {
     totalExpectedChars += targetText.length;
 
     renderTargetText();
-    textInputEl.value = "";
+    typedText = "";
   }
 });
 
 // Initialize UI with default text
 resetToIdle();
-
-
