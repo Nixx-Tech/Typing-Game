@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typing Practice</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app-header">
+        <h1>Typing Practice</h1>
+        <p class="subtitle">Improve your speed and accuracy in real time.</p>
+      </header>
+
+      <main class="app-main">
+        <section class="controls">
+          <button id="start-btn" class="btn primary">Start Test</button>
+          <button id="restart-btn" class="btn" disabled>Restart</button>
+
+          <label class="select-wrapper">
+            <span>Difficulty</span>
+            <select id="difficulty-select">
+              <option value="easy">Easy (short words)</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard (long words)</option>
+            </select>
+          </label>
+
+          <label class="select-wrapper">
+            <span>Duration</span>
+            <select id="duration-select">
+              <option value="30">30s</option>
+              <option value="60" selected>60s</option>
+              <option value="120">120s</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="typing-area">
+          <div id="countdown" class="countdown">Time: 60s</div>
+          <div id="text-display" class="text-display">
+            Click "Start Test" to begin.
+          </div>
+          <textarea
+            id="text-input"
+            class="text-input"
+            placeholder="Start typing here once the test begins..."
+            disabled
+          ></textarea>
+        </section>
+
+        <section class="stats">
+          <div class="stat">
+            <span class="stat-label">WPM</span>
+            <span id="wpm" class="stat-value">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Accuracy</span>
+            <span id="accuracy" class="stat-value">100%</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Characters</span>
+            <span id="chars" class="stat-value">0 / 0</span>
+          </div>
+        </section>
+
+        <section class="results" id="results" hidden>
+          <h2>Test Finished</h2>
+          <p>Your final WPM: <strong id="final-wpm">0</strong></p>
+          <p>Your final accuracy: <strong id="final-accuracy">100%</strong></p>
+          <button id="results-restart-btn" class="btn secondary">
+            Try Again
+          </button>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <p>
+          Built in Cursor · No backend required · Works fully offline once
+          loaded.
+        </p>
+      </footer>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
