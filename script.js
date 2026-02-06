@@ -2,16 +2,12 @@ const textDisplayEl = document.getElementById("text-display");
 const textInputEl = document.getElementById("text-input");
 const startBtn = document.getElementById("start-btn");
 const restartBtn = document.getElementById("restart-btn");
-const resultsRestartBtn = document.getElementById("results-restart-btn");
 const difficultySelect = document.getElementById("difficulty-select");
-const durationSelect = document.getElementById("duration-select");
 const countdownEl = document.getElementById("countdown");
 const wpmEl = document.getElementById("wpm");
+const bestWpmEl = document.getElementById("best-wpm");
 const accuracyEl = document.getElementById("accuracy");
 const charsEl = document.getElementById("chars");
-const resultsSection = document.getElementById("results");
-const finalWpmEl = document.getElementById("final-wpm");
-const finalAccuracyEl = document.getElementById("final-accuracy");
 
 // A simple word list grouped by difficulty
 const WORD_BANK = {
@@ -35,7 +31,6 @@ const WORD_BANK = {
     "fast",
     "soft",
     "kind",
-    "nixx",
   ],
   medium: [
     "typing",
@@ -84,10 +79,9 @@ const WORD_BANK = {
 };
 
 let targetText = "";
-let timerId = null;
 let startTime = null;
-let testDurationSeconds = 60;
 let testRunning = false;
+let highScoreWpm = Number(localStorage.getItem("typingHighScoreWpm") || "0");
 
 function sampleWords(difficulty, minChars) {
   const words = WORD_BANK[difficulty] || WORD_BANK.medium;
@@ -112,8 +106,10 @@ function sampleWords(difficulty, minChars) {
 
 function prepareText() {
   const difficulty = difficultySelect.value;
-  // Roughly 5 chars per word, 5 words per WPM, duration seconds / 60 minutes
-  const estimatedChars = Math.round((testDurationSeconds / 60) * 5 * 5 * 1.4);
+  // Generate a very long stream of text so you effectively never run out.
+  const difficultyMultiplier =
+    difficulty === "easy" ? 1.0 : difficulty === "hard" ? 1.5 : 1.2;
+  const estimatedChars = Math.round(6000 * difficultyMultiplier);
   targetText = sampleWords(difficulty, estimatedChars);
 
   textDisplayEl.innerHTML = "";
@@ -179,6 +175,11 @@ function calculateStats(typedText, elapsedSeconds) {
 
 function updateStats(wpm, accuracy, correct, incorrect) {
   wpmEl.textContent = String(wpm);
+  if (wpm > highScoreWpm) {
+    highScoreWpm = wpm;
+    localStorage.setItem("typingHighScoreWpm", String(highScoreWpm));
+  }
+  bestWpmEl.textContent = String(highScoreWpm);
   accuracyEl.textContent = `${accuracy}%`;
   charsEl.textContent = `${correct + incorrect} / ${targetText.length}`;
 }
@@ -186,72 +187,22 @@ function updateStats(wpm, accuracy, correct, incorrect) {
 function startTest() {
   if (testRunning) return;
 
-  testDurationSeconds = parseInt(durationSelect.value, 10) || 60;
-  countdownEl.textContent = `Time: ${testDurationSeconds}s`;
+  countdownEl.textContent = "Endless mode · type as long as you like.";
   prepareText();
 
   testRunning = true;
   startBtn.disabled = true;
   restartBtn.disabled = false;
   difficultySelect.disabled = true;
-  durationSelect.disabled = true;
-  resultsSection.hidden = true;
 
   textInputEl.disabled = false;
   textInputEl.value = "";
   textInputEl.focus();
 
   startTime = performance.now();
-  timerId = window.setInterval(tick, 100);
 }
 
-function tick() {
-  const now = performance.now();
-  const elapsed = (now - startTime) / 1000;
-  const remaining = Math.max(0, testDurationSeconds - elapsed);
-
-  countdownEl.textContent = `Time: ${Math.ceil(remaining)}s`;
-
-  const typedText = textInputEl.value;
-  const stats = calculateStats(typedText, Math.max(elapsed, 0.1));
-  updateStats(stats.wpm, stats.accuracy, stats.correct, stats.incorrect);
-
-  if (remaining <= 0.05) {
-    finishTest();
-  }
-}
-
-function finishTest() {
-  if (!testRunning) return;
-  testRunning = false;
-
-  if (timerId != null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-
-  textInputEl.disabled = true;
-  startBtn.disabled = false;
-  restartBtn.disabled = false;
-  difficultySelect.disabled = false;
-  durationSelect.disabled = false;
-
-  const elapsed = testDurationSeconds;
-  const typedText = textInputEl.value;
-  const stats = calculateStats(typedText, Math.max(elapsed, 0.1));
-  updateStats(stats.wpm, stats.accuracy, stats.correct, stats.incorrect);
-
-  finalWpmEl.textContent = String(stats.wpm);
-  finalAccuracyEl.textContent = `${stats.accuracy}%`;
-  resultsSection.hidden = false;
-}
-
-function resetTest() {
-  if (timerId != null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-
+function resetToIdle() {
   testRunning = false;
   textInputEl.value = "";
   textInputEl.disabled = true;
@@ -259,18 +210,20 @@ function resetTest() {
   startBtn.disabled = false;
   restartBtn.disabled = true;
   difficultySelect.disabled = false;
-  durationSelect.disabled = false;
-  resultsSection.hidden = true;
-
-  testDurationSeconds = parseInt(durationSelect.value, 10) || 60;
-  countdownEl.textContent = `Time: ${testDurationSeconds}s`;
+  countdownEl.textContent = "Endless mode · click Start to begin.";
 
   prepareText();
 }
 
+function restartTest() {
+  // Reset everything and start a fresh endless session.
+  testRunning = false;
+  startBtn.disabled = false;
+  startTest();
+}
+
 startBtn.addEventListener("click", startTest);
-restartBtn.addEventListener("click", resetTest);
-resultsRestartBtn.addEventListener("click", resetTest);
+restartBtn.addEventListener("click", restartTest);
 
 textInputEl.addEventListener("input", () => {
   if (!testRunning) return;
@@ -279,8 +232,25 @@ textInputEl.addEventListener("input", () => {
   const typedText = textInputEl.value;
   const stats = calculateStats(typedText, Math.max(elapsed, 0.1));
   updateStats(stats.wpm, stats.accuracy, stats.correct, stats.incorrect);
+
+  // If we are getting close to the end of the current text, append more.
+  const remainingChars = targetText.length - typedText.length;
+  if (remainingChars < 200) {
+    const difficulty = difficultySelect.value;
+    const extra = sampleWords(difficulty, 2000);
+    const startIndex = targetText.length;
+    targetText += " " + extra;
+
+    for (let i = startIndex; i < targetText.length; i++) {
+      const span = document.createElement("span");
+      span.textContent = targetText[i];
+      span.classList.add("char");
+      textDisplayEl.appendChild(span);
+    }
+  }
 });
 
 // Initialize UI with default text
-resetTest();
+resetToIdle();
+
 
