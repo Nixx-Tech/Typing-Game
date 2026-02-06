@@ -212,8 +212,8 @@ function restartTest() {
   totalCorrect = 0;
   totalIncorrect = 0;
   totalExpectedChars = 0;
-  startBtn.disabled = false;
-  startTest();
+  updateStats(0, 100, 0, 0);
+  resetToIdle();
 }
 
 startBtn.addEventListener("click", startTest);
