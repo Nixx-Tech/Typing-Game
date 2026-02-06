@@ -311,7 +311,7 @@ body {
 
 .app-footer {
   margin-top: 14px;
-  text-align: center;
+  text-align: bottom;
   font-size: 0.75rem;
   color: rgba(148, 163, 184, 0.8);
 }
